@@ -100,7 +100,7 @@ async function openDetail(title){
 function drawRating(){let n=state.ratings[current?.title]||0;$('#stars').innerHTML=[1,2,3,4,5].map(i=>`<button class="star" data-r="${i}">${i<=n?'★':'☆'}</button>`).join('');$$('[data-r]').forEach(b=>b.onclick=()=>{state.ratings[current.title]=+b.dataset.r;save();drawRating()})}
 function drawComments(){let a=state.comments[current?.title]||[];$('#comments').innerHTML=a.slice().reverse().map(c=>`<div class="comment"><div><b>${c.by}</b><div>${esc(c.text)}</div></div></div>`).join('')}
 function openM(id){$('#'+id).classList.add('open')} function closeM(m){m.classList.remove('open')}
-function renderProfiles(){let a=state.profiles;$('#profiles').innerHTML=a.map((p,i)=>`<button class="profile" data-p="${i}"><i>${p.avatar}</i><br><b>${p.name}</b>${p.kid?'<div class="muted">Çocuk</div>':''}</button>`).join('');$$('[data-p]').forEach(b=>b.onclick=()=>{state.profile=+b.dataset.p;save();closeM($('#profileModal'));render()})}
+function renderProfiles(){let a=state.profiles;$('#profiles').innerHTML=a.map((p,i)=>`<button class="profile" data-p="${i}"><i>${p.avatar}</i><br><b>${p.name}</b>${p.kid?'<div class="muted">Çocuk</div>':''}</button>`).join('');$$('[data-p]').forEach(b=>b.onclick=()=>{state.profile=+b.dataset.p;save();window.dispatchEvent(new Event('cartoonmax:profile-change'));closeM($('#profileModal'));render()})}
 let selAv='😎';
 function renderAv(){let a=['😎','🧸','👾','🦸','🦄','🐼','🐯','🤖','🛹','🎮','👽','⭐'];$('#avatars').innerHTML=a.map(x=>`<button class="av ${x===selAv?'on':''}" data-av="${x}">${x}</button>`).join('');$$('[data-av]').forEach(b=>b.onclick=()=>{selAv=b.dataset.av;renderAv()})}
 async function hash(s){let b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
@@ -114,7 +114,7 @@ $('#theme').onchange=e=>{state.theme=e.target.value;save();applyPrefs()}; $('#la
 $('#toggleFav').onclick=()=>{let a=pfav(),i=a.indexOf(current.title);i>=0?a.splice(i,1):a.push(current.title);save();$('#toggleFav').textContent=fav(current)?'✓ Listemde':'+ Listem';render()};
 $('#watchOfficial').onclick=()=>window.open('https://www.justwatch.com/tr/arama?q='+encodeURIComponent(current.title),'_blank','noopener');
 $('#commentBtn').onclick=()=>{let t=$('#commentText').value.trim();if(!t)return;(state.comments[current.title]||(state.comments[current.title]=[])).push({by:state.account||prof().name,text:t});$('#commentText').value='';save();drawComments()};
-$('#addProfile').onclick=()=>{let n=$('#profileName').value.trim();if(!n)return;state.profiles.push({name:n,avatar:selAv,kid:$('#kid').checked});state.profile=state.profiles.length-1;save();closeM($('#profileModal'));render()};
+$('#addProfile').onclick=()=>{let n=$('#profileName').value.trim();if(!n)return;state.profiles.push({name:n,avatar:selAv,kid:$('#kid').checked});state.profile=state.profiles.length-1;save();window.dispatchEvent(new Event('cartoonmax:profile-change'));closeM($('#profileModal'));render()};
 $('#register').onclick=async()=>{let e=$('#email').value.trim().toLowerCase(),p=$('#pass').value;if(!e||p.length<4)return alert('E-posta ve en az 4 karakter şifre gir.');state.accounts[e]=await hash(p);state.account=e;save();accountUI()};
 $('#login').onclick=async()=>{let e=$('#email').value.trim().toLowerCase(),p=await hash($('#pass').value);if(state.accounts[e]!==p)return alert('E-posta veya şifre yanlış.');state.account=e;save();accountUI()};
 chips();applyPrefs();render();
