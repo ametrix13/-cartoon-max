@@ -73,7 +73,7 @@
       panel.className = 'ad-consent';
       panel.setAttribute('role', 'region');
       panel.setAttribute('aria-labelledby', 'adConsentTitle');
-      panel.innerHTML = '<div><h2 id="adConsentTitle">Reklam tercihin</h2><p>İzin verirsen Google AdSense çerez ve benzeri teknolojiler kullanabilir; IP adresi ve tarayıcı bilgisi gibi teknik verileri işleyebilir. Sitemiz kişiselleştirilmemiş reklam ister. Reddedersen siteyi reklamsız kullanabilirsin. <a href="privacy.html">Gizlilik ve çerezler</a></p></div><div class="ad-consent-actions"><button type="button" data-ad-choice="deny">Reddet</button><button type="button" data-ad-choice="allow">İzin ver</button></div>';
+      panel.innerHTML = '<div><h2 id="adConsentTitle">Gizlilik tercihlerin</h2><p>Cartoon Max reklamlarla desteklenir. Google reklamları için çerez ve benzeri teknolojilerin kullanımını seçebilirsin. Google IP adresi ve tarayıcı bilgisi gibi teknik verileri işleyebilir. Sitemiz kişiselleştirilmemiş reklam talep eder. <a href="privacy.html">Gizlilik ve çerezler</a></p></div><div class="ad-consent-actions"><button type="button" data-ad-choice="deny">Çerezleri reddet</button><button type="button" data-ad-choice="allow">Çerezlere izin ver</button></div>';
       panel.querySelectorAll('[data-ad-choice]').forEach(button => {
         button.addEventListener('click', () => choose(button.dataset.adChoice));
       });
