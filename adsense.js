@@ -35,6 +35,10 @@
     loaded = true;
     window.adsbygoogle = window.adsbygoogle || [];
     window.adsbygoogle.requestNonPersonalizedAds = 1;
+    window.adsbygoogle.push({
+      google_ad_client: client,
+      enable_page_level_ads: true
+    });
     const script = document.createElement('script');
     script.id = 'cartoonmax-adsense';
     script.async = true;
