@@ -125,14 +125,14 @@ function playSource(src,index=0){
   const stage=$('#playerStage');
   const html=sourceEmbed(src);
   stage.innerHTML=html||'<div class="player-empty">Bu video kaynağı oynatılamadı.</div>';
-  $('#playerSources .player-source').forEach((b,i)=>b.classList.toggle('on',i===index));
+  $$('#playerSources .player-source').forEach((b,i)=>b.classList.toggle('on',i===index));
 }
 function openPlayer(title){
   const list=sourcesFor(title);
   if(!list.length) return;
   $('#playerTitle').textContent=title;
   $('#playerSources').innerHTML=list.map((s,i)=>'<button class="player-source" data-play-source="'+i+'"><span><b>'+(s.label||('Video '+(i+1)))+'</b><small>'+(s.meta||s.type)+'</small></span><b>▶</b></button>').join('');
-  $('[data-play-source]').forEach(b=>b.onclick=()=>playSource(list[+b.dataset.playSource],+b.dataset.playSource));
+  $$('[data-play-source]').forEach(b=>b.onclick=()=>playSource(list[+b.dataset.playSource],+b.dataset.playSource));
   openM('playerModal'); playSource(list[0],0);
 }
 function syncWatchButton(){
