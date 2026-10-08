@@ -31,6 +31,15 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 .detail-overlay h2{margin:0 0 4px;font-size:32px;text-shadow:0 2px 12px #000a}
 .detail-overlay p{margin:0;color:#e1e8f4}
 html[data-theme=light] .card.poster-card p,html[data-theme=light] .detail-overlay p{color:#eff4ff}
+.player-box{width:min(1120px,96vw)}
+.player-stage{margin:14px 0 16px;aspect-ratio:16/9;background:#02050a;border:1px solid #ffffff18;border-radius:18px;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.player-stage iframe,.player-stage video{width:100%;height:100%;border:0;background:#000}
+.player-empty{padding:28px;text-align:center;color:var(--mut,#9cacbf)}
+.player-sources{display:grid;gap:8px}
+.player-source{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid #ffffff15;border-radius:14px;background:#ffffff08;color:inherit;text-align:left}
+.player-source:hover,.player-source.on{border-color:var(--a,#68f1c8);background:#ffffff10}
+.player-source span{display:block}.player-source small{color:var(--mut,#9cacbf)}
+.player-note{font-size:12px;margin-bottom:0}
 </style>`);
 
 function applyPrefs(){document.documentElement.dataset.theme=state.theme;$('#theme').value=state.theme;$('#lang').value=state.lang;let z=T[state.lang];$$('#nav button').forEach(b=>b.textContent=z[b.dataset.view]||b.textContent);$('#todayBtn').textContent=z.today}
@@ -72,10 +81,70 @@ async function fetchPoster(title){
 function updatePosterDom(title,src){$$(`[data-poster="${CSS.escape(title)}"]`).forEach(el=>el.style.backgroundImage=`url('${safeUrl(src)}')`)}
 function hydratePosters(root=document){let cards=[...root.querySelectorAll('.card[data-title]')].slice(0,48); cards.forEach((el,i)=>{ let title=el.dataset.title; if(state.posterCache[title]) updatePosterDom(title,state.posterCache[title]); else setTimeout(()=>fetchPoster(title),i*120); }); }
 
+
+const videoSources=window.CARTOON_MAX_SOURCES||{};
+
+function sourcesFor(title){return Array.isArray(videoSources[title])?videoSources[title]:[]}
+function youtubeId(value){
+  value=String(value||'').trim();
+  if(/^[A-Za-z0-9_-]{11}$/.test(value)) return value;
+  try{
+    const u=new URL(value);
+    if(u.hostname==='youtu.be') return u.pathname.split('/').filter(Boolean)[0]||'';
+    if(/(^|\.)youtube\.com$/.test(u.hostname)){
+      if(u.pathname==='/watch') return u.searchParams.get('v')||'';
+      const m=u.pathname.match(/^\/(?:embed|shorts)\/([^/?#]+)/); if(m) return m[1];
+    }
+  }catch{}
+  return '';
+}
+function driveId(value){
+  value=String(value||'').trim();
+  if(/^[A-Za-z0-9_-]{20,}$/.test(value)) return value;
+  try{
+    const u=new URL(value);
+    if(u.hostname!=='drive.google.com') return '';
+    const m=u.pathname.match(/\/file\/d\/([^/]+)/); return m?.[1]||u.searchParams.get('id')||'';
+  }catch{return ''}
+}
+function sourceEmbed(src){
+  if(src.type==='youtube'){
+    const id=youtubeId(src.id||src.url); if(!id) return '';
+    return '<iframe allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" src="https://www.youtube-nocookie.com/embed/'+encodeURIComponent(id)+'?rel=0"></iframe>';
+  }
+  if(src.type==='drive'){
+    const id=driveId(src.id||src.url); if(!id) return '';
+    return '<iframe allow="autoplay; fullscreen" allowfullscreen src="https://drive.google.com/file/d/'+encodeURIComponent(id)+'/preview"></iframe>';
+  }
+  if(src.type==='video' && /^https:\/\//.test(src.url||'')){
+    return '<video controls playsinline src="'+esc(src.url)+'"></video>';
+  }
+  return '';
+}
+function playSource(src,index=0){
+  const stage=$('#playerStage');
+  const html=sourceEmbed(src);
+  stage.innerHTML=html||'<div class="player-empty">Bu video kaynağı oynatılamadı.</div>';
+  $('#playerSources .player-source').forEach((b,i)=>b.classList.toggle('on',i===index));
+}
+function openPlayer(title){
+  const list=sourcesFor(title);
+  if(!list.length) return;
+  $('#playerTitle').textContent=title;
+  $('#playerSources').innerHTML=list.map((s,i)=>'<button class="player-source" data-play-source="'+i+'"><span><b>'+(s.label||('Video '+(i+1)))+'</b><small>'+(s.meta||s.type)+'</small></span><b>▶</b></button>').join('');
+  $('[data-play-source]').forEach(b=>b.onclick=()=>playSource(list[+b.dataset.playSource],+b.dataset.playSource));
+  openM('playerModal'); playSource(list[0],0);
+}
+function syncWatchButton(){
+  const list=current?sourcesFor(current.title):[];
+  $('#watchNow').hidden=!list.length;
+  if(list.length) $('#watchNow').textContent=list.length>1?'▶ İzle · '+list.length+' video':'▶ İzle';
+}
+
 let current=null,tv=null;
 async function openDetail(title){
   current=catalog.find(x=>x.title===title); if(!current) return;
-  $('#dTitle').textContent=current.title; $('#dNet').textContent=current.network; $('#dMeta').textContent=`${current.year} · ${current.type==='movie'?'Film / özel':'Dizi'}`; $('#dDesc').textContent=`${current.title}, ${current.network} döneminin Cartoon Max arşivindeki yapımlarından biri.`; $('#toggleFav').textContent=fav(current)?'✓ Listemde':'+ Listem';
+  $('#dTitle').textContent=current.title; $('#dNet').textContent=current.network; syncWatchButton(); $('#dMeta').textContent=`${current.year} · ${current.type==='movie'?'Film / özel':'Dizi'}`; $('#dDesc').textContent=`${current.title}, ${current.network} döneminin Cartoon Max arşivindeki yapımlarından biri.`; $('#toggleFav').textContent=fav(current)?'✓ Listemde':'+ Listem';
   $('#cast').innerHTML='<span class="muted">Yükleniyor…</span>'; $('#eps').innerHTML='<div class="muted">Bölüm rehberi yükleniyor…</div>'; $('#seasonTabs').innerHTML=''; drawRating(); drawComments();
   let art=posterFor(current);
   let detailTop=`<div class="detail-art"><div class="poster" style="background-image:url('${safeUrl(art)}')"></div><div class="detail-overlay"><div class="net">${current.network}</div><h2>${current.title}</h2><p>${current.year} · ${current.type==='teen'?'Gençlik dizisi':current.type==='movie'?'Film / özel yapım':'Çizgi dizi'}</p></div></div>`;
@@ -99,7 +168,7 @@ async function openDetail(title){
 }
 function drawRating(){let n=state.ratings[current?.title]||0;$('#stars').innerHTML=[1,2,3,4,5].map(i=>`<button class="star" data-r="${i}">${i<=n?'★':'☆'}</button>`).join('');$$('[data-r]').forEach(b=>b.onclick=()=>{state.ratings[current.title]=+b.dataset.r;save();drawRating()})}
 function drawComments(){let a=state.comments[current?.title]||[];$('#comments').innerHTML=a.slice().reverse().map(c=>`<div class="comment"><div><b>${c.by}</b><div>${esc(c.text)}</div></div></div>`).join('')}
-function openM(id){$('#'+id).classList.add('open')} function closeM(m){m.classList.remove('open')}
+function openM(id){$('#'+id).classList.add('open')} function closeM(m){m.classList.remove('open');if(m.id==='playerModal')$('#playerStage').innerHTML=''}
 function renderProfiles(){let a=state.profiles;$('#profiles').innerHTML=a.map((p,i)=>`<button class="profile" data-p="${i}"><i>${p.avatar}</i><br><b>${p.name}</b>${p.kid?'<div class="muted">Çocuk</div>':''}</button>`).join('');$$('[data-p]').forEach(b=>b.onclick=()=>{state.profile=+b.dataset.p;save();window.dispatchEvent(new Event('cartoonmax:profile-change'));closeM($('#profileModal'));render()})}
 let selAv='😎';
 function renderAv(){let a=['😎','🧸','👾','🦸','🦄','🐼','🐯','🤖','🛹','🎮','👽','⭐'];$('#avatars').innerHTML=a.map(x=>`<button class="av ${x===selAv?'on':''}" data-av="${x}">${x}</button>`).join('');$$('[data-av]').forEach(b=>b.onclick=()=>{selAv=b.dataset.av;renderAv()})}
@@ -112,6 +181,7 @@ $('#settingsBtn').onclick=()=>openM('settingsModal'); $('#profileBtn').onclick=(
 $$('[data-close]').forEach(b=>b.onclick=()=>closeM(b.closest('.modal'))); $$('.modal').forEach(m=>m.onclick=e=>{if(e.target===m)closeM(m)});
 $('#theme').onchange=e=>{state.theme=e.target.value;save();applyPrefs()}; $('#lang').onchange=e=>{state.lang=e.target.value;save();applyPrefs()}; $('#todayBtn').onclick=$('#heroToday').onclick=()=>openDetail(daily());
 $('#toggleFav').onclick=()=>{let a=pfav(),i=a.indexOf(current.title);i>=0?a.splice(i,1):a.push(current.title);save();$('#toggleFav').textContent=fav(current)?'✓ Listemde':'+ Listem';render()};
+$('#watchNow').onclick=()=>current&&openPlayer(current.title);
 $('#watchOfficial').onclick=()=>window.open('https://www.justwatch.com/tr/arama?q='+encodeURIComponent(current.title),'_blank','noopener');
 $('#commentBtn').onclick=()=>{let t=$('#commentText').value.trim();if(!t)return;(state.comments[current.title]||(state.comments[current.title]=[])).push({by:state.account||prof().name,text:t});$('#commentText').value='';save();drawComments()};
 $('#addProfile').onclick=()=>{let n=$('#profileName').value.trim();if(!n)return;state.profiles.push({name:n,avatar:selAv,kid:$('#kid').checked});state.profile=state.profiles.length-1;save();window.dispatchEvent(new Event('cartoonmax:profile-change'));closeM($('#profileModal'));render()};
